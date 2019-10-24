@@ -2,7 +2,7 @@ import numpy as np
 import math
 
 
-def get_other_point(edge_img_tensor, start_point, is_right, is_top):
+def get_other_point(edge_img_tensor, start_point, is_right=True, is_top=True, mode='get_point'):
     '''Computes the other corner point depending on a given line.
 
     Args:
@@ -27,32 +27,42 @@ def get_other_point(edge_img_tensor, start_point, is_right, is_top):
         vertical_direction = -1
 
     same_x_counter = 0
+    neigbours_counter = 0
     while True:
         try:
             if edge_img_tensor[y][x+horizontal_direction].item() == 1.0:
                 same_x_counter = 0
                 x += horizontal_direction
+                neigbours_counter += 1
             elif edge_img_tensor[y+vertical_direction][x].item() == 1.0:
                 same_x_counter += 1
                 y += vertical_direction
+                neigbours_counter += 1
             elif edge_img_tensor[y+vertical_direction][x+horizontal_direction].item() == 1.0:
                 same_x_counter = 0
                 x += horizontal_direction
                 y += vertical_direction
+                neigbours_counter += 1
 
             elif edge_img_tensor[y-vertical_direction][x].item() == 1.0:    # for the case of a bulge
                 y -= vertical_direction
                 same_x_counter += 1
+                neigbours_counter += 1
             elif edge_img_tensor[y-vertical_direction][x-horizontal_direction].item() == 1.0:
                 x -= horizontal_direction
                 y -= vertical_direction
+                neigbours_counter += 1
                 same_x_counter += 1
             else:   # end-point found
                 break
-            if same_x_counter > 2:
+            if mode == 'get_point' and same_x_counter > 2:
                 break
+            if mode == 'count_neighbours' and neigbours_counter > 5:
+                return True
         except IndexError:
             break
+    if mode == 'count_neighbours':
+        return False
     return (x, y)
 
 
@@ -141,17 +151,31 @@ def get_rotation(edge_img_tensor):
         'angle_top': x, 'angle_bot': x, 'volume': x}
     '''
 
+    def first_corner(edge_img_tensor, mode):
+        if mode == 'top':
+            a = 0
+            b = len(edge_img_tensor)
+            c = 1
+            is_top = True
+        else:
+            a = len(edge_img_tensor) - 1
+            b = -1
+            c = -1
+            is_top = False
+        for line_index in range(a, b, c):
+            for pixel_index in range(len(edge_img_tensor[line_index])):
+                pixel = edge_img_tensor[line_index][pixel_index]
+                if pixel.item() == 1.0:
+                    if get_other_point(edge_img_tensor=edge_img_tensor, start_point=(pixel_index, line_index),
+                                       is_top=is_top, mode='count_neighbours'):
+                        return (pixel_index, line_index)
+
     width_mid = edge_img_tensor.size()[1] // 2
     top_is_right = False
     bot_is_right = False
     # ==== first pixel from top ====
-    corner_pixel_coords = []
-    for line_index in range(len(edge_img_tensor)):
-        for pixel_index in range(len(edge_img_tensor[line_index])):
-            pixel = edge_img_tensor[line_index][pixel_index]
-            if pixel.item() == 1.0:
-                corner_pixel_coords.append((pixel_index, line_index))
-    corner_pixel_coords = [[corner_pixel_coords[0]], [corner_pixel_coords[-1]], [], []]
+    corner_pixel_coords = [[first_corner(edge_img_tensor=edge_img_tensor, mode='top')],
+                           [first_corner(edge_img_tensor=edge_img_tensor, mode='bot')], [], []]
     if corner_pixel_coords[0][0][0] > width_mid:
         top_is_right = True
     if corner_pixel_coords[1][0][0] > width_mid:
