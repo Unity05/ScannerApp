@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import numpy as np
 
@@ -35,7 +36,10 @@ class DenoisingAutoencoderSheetEdges(nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         if self.hard_mode:
-            x = np.heaviside((x-self.threshold).cpu().detach(), 0).requires_grad_().cuda()
+            if torch.cuda.is_available():
+                x = np.heaviside((x - self.threshold).cpu().detach(), 0).requires_grad_().cuda()
+            else:
+                x = np.heaviside((x-self.threshold).cpu().detach(), 0).requires_grad_()
         return x
 
 

@@ -11,13 +11,14 @@ def edit_layout_parts():
     It replaces every original layout part image by the edited one.
     '''
 
-    model = torch.load('models/layout_parts_model_48.pth')
-    model_1 = torch.load('models/layout_parts_model_34.2.pth')
-
     if torch.cuda.is_available():
+        model = torch.load('models/layout_parts_model_48.pth')
+        model_1 = torch.load('models/layout_parts_model_34.2.pth')
         model.cuda().eval()
         model_1.cuda().eval()
     else:
+        model = torch.load('models/layout_parts_model_48.pth', map_location=torch.device('cpu'))
+        model_1 = torch.load('models/layout_parts_model_34.2.pth', map_location=torch.device('cpu'))
         model.eval()
         model_1.eval()
 
