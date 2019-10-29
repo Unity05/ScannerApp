@@ -32,11 +32,13 @@ class DenoisingAutoencoderSheetEdges(nn.Module):
             nn.Sigmoid()
         )
 
-    def forward(self, x):
+    def forward(self, x, model_mode):
         x = self.encoder(x)
         x = self.decoder(x)
         if self.hard_mode:
-            if torch.cuda.is_available():
+            if model_mode == 0:
+                x = np.heaviside((x - self.threshold).cpu().detach(), 0).requires_grad_()
+            elif torch.cuda.is_available():
                 x = np.heaviside((x - self.threshold).cpu().detach(), 0).requires_grad_().cuda()
             else:
                 x = np.heaviside((x-self.threshold).cpu().detach(), 0).requires_grad_()

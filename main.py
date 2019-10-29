@@ -25,6 +25,8 @@ class Window(QWidget):
         '''
 
         super().__init__()
+        self.model_mode = 0
+
         self.width = int(screen_resolution.width() * w_f)
         self.height = int(screen_resolution.height() * h_f)
         self.x_border_distance = int(self.width / 9)
@@ -52,6 +54,14 @@ class Window(QWidget):
         self.button_output.move(self.x_border_distance, self.height-self.y_border_distance-self.button_output.height())
         self.button_output.clicked.connect(self.get_output_image)
 
+        self.model_mode_combo = QComboBox(self)
+        self.model_mode_combo.setGeometry(self.x_border_distance-self.button_output.width(),
+                                          self.height - self.y_border_distance - self.button_output.height(),
+                                          75*self.ratio, 32*self.ratio)
+        self.model_mode_combo.addItems(['CPU', 'GPU'])
+        self.model_mode_combo.setCurrentIndex(self.model_mode)
+        self.model_mode_combo.activated[int].connect(self.model_mode_changed)
+
         self.output_img_info = QLabel(self)
         self.output_img_info.setGeometry(self.x_border_distance + (125 * self.ratio),
                                          self.height-self.y_border_distance-self.button_output.height(), 150*self.ratio,
@@ -67,6 +77,9 @@ class Window(QWidget):
         self.output_img_label = QLabel(self)
 
         self.show()
+
+    def model_mode_changed(self, i):
+        self.model_mode = i
 
     def get_updated_image_shape(self, image_size):
         '''Computes the new shape for an image
@@ -106,11 +119,12 @@ class Window(QWidget):
         if output_img_name == '':
             output_img_name = 'final_image'
         path = 'final_image/' + output_img_name + '.png'
-        corner_pixel_coords, sheet_state_dict = denoise_edge.get_edge_data(img_file=self.input_img_path_line.text())
+        corner_pixel_coords, sheet_state_dict = denoise_edge.get_edge_data(img_file=self.input_img_path_line.text(),
+                                                                           model_mode=self.model_mode)
         box_coords = text_layout_analysis.get_layout(img_file=self.input_img_path_line.text(),
                                                      sheet_volume=sheet_state_dict['volume'],
                                                      corner_points=corner_pixel_coords)
-        layout_denoising.edit_layout_parts()
+        layout_denoising.edit_layout_parts(model_mode=self.model_mode)
         create_final_image.get_final_image(box_coords=box_coords, corner_pixel_coords=corner_pixel_coords,
                                            sheet_state_dict=sheet_state_dict, out_img_path=path)
 
